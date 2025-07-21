@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<!-- La lingua dell'attributo lang verrà impostata dinamicamente da JS -->
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Il titolo verrà impostato dinamicamente da JS -->
+    <title>Lancio Dadi</title>
+    <script src="tailwindcss.js"></script>
+    <style>
+        /* --- FONT LOCALE PERSONALIZZATO --- */
+        @font-face {
+            font-family: 'DiceAppFont';
+            /* Assicurati che i percorsi a questi file siano corretti nel tuo progetto */
+            src: url('fonts/miofont.woff2') format('woff2'),
+                 url('fonts/ari-w9500.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        /* --- CONFIGURAZIONE E STILI DI BASE --- */
+        :root {
+            --bg-primary: #111827; /* gray-900 */
+            --bg-secondary: #1f2937; /* gray-800 */
+            --bg-tertiary: #374151; /* gray-700 */
+            --accent-cyan: #06b6d4;
+            --accent-cyan-hover: #0891b2;
+            --accent-red: #ef4444;
+            --accent-red-hover: #dc2626;
+            --text-primary: #f9fafb; /* gray-50 */
+            --text-secondary: #9ca3af; /* gray-400 */
+            --border-color: #4b5563; /* gray-600 */
+        }
+
+        body {
+            /* Utilizzo del font locale con un fallback generico */
+            font-family: 'DiceAppFont', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        /* --- STILI PER LA SCROLLBAR --- */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-primary); }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+
+        /* --- ANIMAZIONI --- */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; transform: translateY(0) scale(1); }
+            to { opacity: 0; transform: translateY(10px) scale(0.98); }
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            70% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); }
+        }
+        .fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        .fade-out { animation: fadeOut 0.3s ease-in forwards; }
+        .pop-in { animation: popIn 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
+
+        /* --- UTILITY PER LE VIEW --- */
+        .view-hidden { display: none !important; }
+        .view-visible { display: block; }
+        
+        /* --- STILI PER LE TAB --- */
+        .tab-btn {
+            position: relative;
+            transition: color 0.3s ease;
+            color: var(--text-secondary);
+        }
+        .tab-btn.active {
+            color: var(--accent-cyan);
+        }
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px; /* Posizionato sopra il bordo del contenitore */
+            left: 0;
+            right: 0;
+            height: 3px;
+            background-color: var(--accent-cyan);
+            border-radius: 2px;
+        }
+
+        /* --- STILI PER I GRUPPI DI STATISTICHE (COMPATTI) --- */
+        .stat-input-group {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem; /* 4px */
+            background-color: var(--bg-tertiary);
+            border-radius: 0.5rem; /* rounded-lg */
+            padding: 0.2rem; /* 3.2px */
+        }
+        .stat-input, .potion-display {
+            flex-grow: 1;
+            background-color: var(--bg-secondary) !important;
+            border: 1px solid var(--border-color);
+            text-align: center;
+            font-weight: 600;
+            padding: 0.4rem;
+            font-size: 0.9rem;
+            border-radius: 0.375rem;
+        }
+        .stat-input:focus {
+            outline: none;
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.5);
+        }
+        .adjust-btn {
+            flex-shrink: 0;
+            width: 1.75rem; /* 28px */
+            height: 1.75rem; /* 28px */
+            font-size: 1.25rem; /* 20px */
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            border-radius: 0.375rem; /* rounded-md */
+            transition: all 0.2s ease;
+        }
+        .adjust-btn:hover {
+            background-color: var(--accent-cyan);
+            color: var(--bg-primary);
+            transform: scale(1.1);
+        }
+        .reset-btn, .potion-btn {
+            flex-shrink: 0;
+            background-color: var(--bg-primary);
+            border-radius: 0.375rem; /* rounded-md */
+            transition: all 0.2s ease;
+            padding: 0.5rem;
+        }
+        .reset-btn:hover, .potion-btn:hover {
+            background-color: var(--accent-red);
+            transform: scale(1.1);
+        }
+        .potion-btn:hover {
+             background-color: var(--accent-cyan);
+        }
+        /* Rimuove le frecce dagli input numerici */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+          -webkit-appearance: none; 
+          margin: 0; 
+        }
+
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-50 min-h-screen flex flex-col items-center p-4">
+
+    <!-- Schermata di Selezione Lingua -->
+    <div id="languageSelector" class="fixed inset-0 bg-gray-900/90 backdrop-blur-sm flex justify-center items-center z-50 p-4 view-hidden">
+        <div class="text-center p-8 bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl fade-in">
+            <h1 class="text-4xl md:text-5xl font-black text-cyan-400 mb-8 tracking-tight">Select your language</h1>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <button data-lang="en" class="lang-btn w-full bg-gray-700 hover:bg-cyan-500 hover:text-gray-900 text-white font-bold text-xl py-4 rounded-lg shadow-lg transition-all transform hover:scale-105">English</button>
+                <button data-lang="es" class="lang-btn w-full bg-gray-700 hover:bg-cyan-500 hover:text-gray-900 text-white font-bold text-xl py-4 rounded-lg shadow-lg transition-all transform hover:scale-105">Español</button>
+                <button data-lang="fr" class="lang-btn w-full bg-gray-700 hover:bg-cyan-500 hover:text-gray-900 text-white font-bold text-xl py-4 rounded-lg shadow-lg transition-all transform hover:scale-105">Français</button>
+                <button data-lang="de" class="lang-btn w-full bg-gray-700 hover:bg-cyan-500 hover:text-gray-900 text-white font-bold text-xl py-4 rounded-lg shadow-lg transition-all transform hover:scale-105">Deutsch</button>
+                <button data-lang="it" class="lang-btn w-full bg-gray-700 hover:bg-cyan-500 hover:text-gray-900 text-white font-bold text-xl py-4 rounded-lg shadow-lg transition-all transform hover:scale-105">Italiano</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenitore Principale dell'App -->
+    <div id="appContainer" class="w-full max-w-4xl mx-auto view-hidden">
+        <header class="text-center my-6">
+            <h1 class="text-5xl font-black text-cyan-400 tracking-tight" data-translate="appTitle">Lancio Dadi D20</h1>
+        </header>
+
+        <!-- Navigazione a Schede (Tab) -->
+        <div class="flex border-b border-gray-700 mb-6">
+            <button id="tabDice" class="tab-btn flex-1 py-3 px-4 font-bold text-lg" data-translate="tabDice">Lancio Dadi</button>
+            <button id="tabCombat" class="tab-btn flex-1 py-3 px-4 font-bold text-lg" data-translate="tabCombat">Assistente Combattimento</button>
+        </div>
+
+        <!-- Contenuto delle Schede -->
+        <div id="tabContent">
+            <!-- Scheda Lancio Dadi -->
+            <div id="diceRollerView">
+                <main class="bg-gray-800 p-6 rounded-2xl shadow-2xl max-w-lg mx-auto">
+                    <div class="flex items-center justify-center space-x-4">
+                        <input type="number" id="numDice" value="1" min="1" max="100" class="bg-gray-700 text-white w-24 text-center text-3xl font-bold p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                        <span class="text-3xl font-bold text-gray-400">d</span>
+                        <select id="diceType" class="bg-gray-700 text-white text-3xl font-bold p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 appearance-none text-center">
+                            <option value="4">4</option> <option value="6">6</option> <option value="8">8</option> <option value="10">10</option> <option value="12">12</option> <option value="20" selected>20</option> <option value="100">100</option>
+                        </select>
+                    </div>
+                    <button id="rollButton" class="w-full bg-cyan-500 hover:bg-cyan-600 text-gray-900 font-bold text-2xl py-4 mt-6 rounded-xl shadow-lg transition-transform transform hover:scale-105 active:scale-100" data-translate="rollButton">Lancia!</button>
+                </main>
+                <section id="resultSection" class="text-center mt-6 p-6 bg-gray-800 rounded-2xl shadow-2xl min-h-[150px] flex flex-col justify-center items-center max-w-lg mx-auto">
+                    <p id="resultText" class="text-7xl font-black text-white" style="text-shadow: 0 0 15px rgba(6, 182, 212, 0.5);">0</p>
+                    <p id="resultDetails" class="text-gray-400 mt-2 font-semibold"></p>
+                </section>
+            </div>
+
+            <!-- Scheda Assistente Combattimento -->
+            <div id="combatHelperView" class="view-hidden">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <!-- Colonna Eroe -->
+                    <div class="bg-gray-800 p-4 rounded-2xl shadow-2xl space-y-3 border-t-4 border-cyan-500">
+                        <h3 class="text-2xl font-bold text-center text-cyan-400 mb-3" data-translate="hero">Eroe</h3>
+                        <div class="flex items-center gap-3"><label class="font-semibold text-sm w-28 text-right flex-shrink-0" data-translate="hp">Vita:</label><div class="stat-input-group"><button class="adjust-btn" data-stat="hp" data-op="subtract" data-long-press-disabled="true">-</button><input type="number" id="heroHp" value="100" class="stat-input flex-grow-0 w-20"><button class="adjust-btn" data-stat="hp" data-op="add" data-long-press-disabled="true">+</button><button id="resetHeroHp" class="reset-btn" data-translate-title="resetStat"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 110 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" /></svg></button></div></div>
+                        <div class="flex items-center gap-3"><label class="font-semibold text-sm w-28 text-right flex-shrink-0" data-translate="attack">Attacco:</label><div class="stat-input-group"><button class="adjust-btn" data-stat="attack" data-op="subtract">-</button><input type="number" id="heroAttack" value="10" class="stat-input flex-grow-0 w-20"><button class="adjust-btn" data-stat="attack" data-op="add">+</button><button id="resetHeroAttack" class="reset-btn" data-translate-title="resetStat"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 110 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" /></svg></button></div></div>
+                        <div class="flex items-center gap-3"><label class="font-semibold text-sm w-28 text-right flex-shrink-0" data-translate="weapon">Arma:</label><div class="stat-input-group"><button class="adjust-btn" data-stat="weapon" data-op="subtract">-</button><input type="number" id="heroWeapon" value="0" min="0" class="stat-input flex-grow-0 w-20"><button class="adjust-btn" data-stat="weapon" data-op="add">+</button><button id="resetHeroWeapon" class="reset-btn" data-translate-title="resetStat"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 110 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" /></svg></button></div></div>
+                        <div class="flex items-center gap-3"><label class="font-semibold text-sm w-28 text-right flex-shrink-0" data-translate="defense">Difesa:</label><div class="stat-input-group"><button class="adjust-btn" data-stat="defense" data-op="subtract">-</button><input type="number" id="heroDefense" value="5" class="stat-input flex-grow-0 w-20"><button class="adjust-btn" data-stat="defense" data-op="add">+</button><button id="resetHeroDefense" class="reset-btn" data-translate-title="resetStat"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 110 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" /></svg></button></div></div>
+                        <div class="flex items-center gap-3"><label class="font-semibold text-sm w-28 text-right flex-shrink-0" data-translate="armor">Armatura:</label><div class="stat-input-group"><button class="adjust-btn" data-stat="armor" data-op="subtract">-</button><input type="number" id="heroArmor" value="20" class="stat-input flex-grow-0 w-20"><button class="adjust-btn" data-stat="armor" data-op="add">+</button><button id="resetHeroArmor" class="reset-btn" data-translate-title="resetStat"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 110 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" /></svg></button></div></div>
+                        <div class="flex items-center gap-3"><label class="font-semibold text-sm w-28 text-right flex-shrink-0" data-translate="notes">Appunti:</label><input type="text" id="heroNotes" class="w-full bg-gray-700 p-1 rounded-lg border border-gray-600 focus:border-cyan-500 focus:ring-cyan-500 focus:ring-1 focus:outline-none text-sm"></div>
+                        <div class="flex items-center gap-3"><label class="font-semibold text-sm text-yellow-400 w-28 text-right flex-shrink-0" data-translate="coins">Monete:</label><div class="stat-input-group"><button class="adjust-btn" data-stat="coins" data-op="subtract">-</button><input type="number" id="heroCoins" value="0" min="0" class="stat-input flex-grow-0 w-20"><button class="adjust-btn" data-stat="coins" data-op="add">+</button><button id="resetHeroCoins" class="reset-btn" data-translate-title="resetStat"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 110 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" /></svg></button></div></div>
+                        <div class="flex items-center gap-3"><label class="font-semibold text-sm text-pink-400 w-28 text-right flex-shrink-0" data-translate="potions">Pozioni:</label><div class="stat-input-group"><button class="adjust-btn" data-stat="potions" data-op="subtract">-</button><span id="heroPotions" class="potion-display flex-grow-0 w-20">3</span><button class="adjust-btn" data-stat="potions" data-op="add">+</button><button id="usePotionBtn" class="potion-btn" data-translate-title="usePotion"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" /></svg></button></div></div>
+                                <br>                
+                        <div class="flex items-center gap-3"><label class="font-semibold text-sm text-green-400 w-28 text-right flex-shrink-0" data-translate="poison">Veleno:</label><div class="stat-input-group"><button class="adjust-btn" data-stat="poison" data-op="subtract">-</button><input type="number" id="heroPoison" value="0" min="0" class="stat-input flex-grow-0 w-20"><button class="adjust-btn" data-stat="poison" data-op="add">+</button><button id="resetHeroPoison" class="reset-btn" data-translate-title="resetStat"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 110 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" /></svg></button></div></div>
+                        <div class="flex items-center gap-3"><label class="font-semibold text-sm text-red-400 w-28 text-right flex-shrink-0" data-translate="bleed">Sanguinamento:</label><div class="stat-input-group"><button class="adjust-btn" data-stat="bleed" data-op="subtract">-</button><input type="number" id="heroBleed" value="0" min="0" class="stat-input flex-grow-0 w-20"><button class="adjust-btn" data-stat="bleed" data-op="add">+</button><button id="resetHeroBleed" class="reset-btn" data-translate-title="resetStat"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 110 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" /></svg></button></div></div>
+                    </div>
+                    <!-- Colonna Nemico -->
+                    <div class="bg-gray-800 p-4 rounded-2xl shadow-2xl space-y-4 border-t-4 border-red-500">
+                        <h3 class="text-2xl font-bold text-center text-red-400 mb-2" data-translate="enemy">Nemico</h3>
+                        <div class="flex items-center gap-3"><label class="font-semibold text-sm w-28 text-right flex-shrink-0" data-translate="hp">Vita:</label><input type="number" id="enemyHp" value="80" class="w-full bg-gray-700 p-2 rounded-lg border border-gray-600 focus:border-red-500 focus:ring-red-500 focus:ring-2 focus:outline-none text-base"></div>
+                        <div class="flex items-center gap-3"><label class="font-semibold text-sm w-28 text-right flex-shrink-0" data-translate="attack">Attacco:</label><input type="number" id="enemyAttack" value="12" class="w-full bg-gray-700 p-2 rounded-lg border border-gray-600 focus:border-red-500 focus:ring-red-500 focus:ring-2 focus:outline-none text-base"></div>
+                        <div class="flex items-center gap-3"><label class="font-semibold text-sm w-28 text-right flex-shrink-0" data-translate="defense">Difesa:</label><input type="number" id="enemyDefense" value="3" class="w-full bg-gray-700 p-2 rounded-lg border border-gray-600 focus:border-red-500 focus:ring-red-500 focus:ring-2 focus:outline-none text-base"></div>
+                        <div class="flex items-center gap-3"><label class="font-semibold text-sm text-green-400 w-28 text-right flex-shrink-0" data-translate="poison">Veleno:</label><input type="number" id="enemyPoison" value="0" min="0" class="w-full bg-gray-700 p-2 rounded-lg border border-gray-600 focus:border-red-500 focus:ring-red-500 focus:ring-2 focus:outline-none text-base"></div>
+                        <div class="flex items-center gap-3"><label class="font-semibold text-sm text-red-400 w-28 text-right flex-shrink-0" data-translate="bleed">Sanguinamento:</label><input type="number" id="enemyBleed" value="0" min="0" class="w-full bg-gray-700 p-2 rounded-lg border border-gray-600 focus:border-red-500 focus:ring-red-500 focus:ring-2 focus:outline-none text-base"></div>
+                    </div>
+                </div>
+                <div class="mt-6 flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4">
+                     <button id="heroAttackBtn" class="w-full bg-cyan-500 hover:bg-cyan-600 text-gray-900 font-bold py-3 rounded-xl shadow-lg transition-transform transform hover:scale-105" data-translate="heroAttacks">Eroe Attacca</button>
+                     <button id="enemyAttackBtn" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-xl shadow-lg transition-transform transform hover:scale-105" data-translate="enemyAttacks">Nemico Attacca</button>
+                </div>
+                <div class="mt-6 bg-gray-800 p-4 rounded-2xl shadow-2xl">
+                    <h3 class="text-xl font-bold text-center mb-3" data-translate="combatLog">Log Combattimento</h3>
+                    <div id="combatLog" class="h-64 overflow-y-auto bg-gray-900 rounded-lg p-3 text-sm space-y-2"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sezione Storico -->
+        <section class="mt-8 bg-gray-800 p-6 rounded-2xl shadow-2xl">
+            <h2 class="text-2xl font-bold text-center mb-4 text-cyan-400" data-translate="historyTitle">Storico Lanci</h2>
+            <ul id="historyList" class="h-48 overflow-y-auto bg-gray-900 rounded-lg p-3 space-y-2">
+                 <li class="text-center text-gray-500" data-translate="noRollsYet">Nessun lancio ancora.</li>
+            </ul>
+            <div class="flex justify-center items-center mt-4 space-x-4">
+                <button id="outOfCombatRollBtn" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-5 rounded-lg shadow-md transition-transform transform hover:scale-105" data-translate="outOfCombatRoll">Lancio D20</button>
+                <button id="clearButton" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-5 rounded-lg shadow-md transition-transform transform hover:scale-105" data-translate="clearButton">Cancella</button>
+            </div>
+        </section>
+    </div>
+    
+    <!-- Modale di Conferma Cancellazione -->
+    <div id="confirmModal" class="fixed inset-0 bg-black bg-opacity-75 backdrop-blur-sm flex justify-center items-center p-4 hidden z-50">
+        <div class="bg-gray-800 rounded-2xl shadow-2xl p-8 w-full max-w-sm text-center fade-in border-t-4 border-red-500">
+            <h3 class="text-2xl font-bold mb-4" data-translate="modalTitle">Sei sicuro?</h3>
+            <p class="text-gray-400 mb-8" data-translate="modalText">Vuoi davvero cancellare tutto lo storico? L'azione non è reversibile.</p>
+            <div class="flex justify-center gap-4">
+                <button id="confirmClear" class="bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-8 rounded-lg transition-transform transform hover:scale-105" data-translate="confirmButton">Conferma</button>
+                <button id="cancelClear" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-8 rounded-lg transition-transform transform hover:scale-105" data-translate="cancelButton">Annulla</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale di Morte dell'Eroe -->
+    <div id="deathModal" class="fixed inset-0 bg-black bg-opacity-80 backdrop-blur-sm flex justify-center items-center p-4 hidden z-50">
+        <div class="bg-gray-800 rounded-2xl shadow-2xl p-8 w-full max-w-sm text-center fade-in border-t-4 border-red-500">
+            <h3 class="text-3xl font-black text-red-500 mb-4" data-translate="deathTitle">Sei Stato Sconfitto</h3>
+            <p id="deathMessage" class="text-gray-300 text-lg mb-8"></p>
+            <button id="closeDeathModal" class="w-full bg-cyan-500 hover:bg-cyan-600 text-gray-900 font-bold py-3 px-8 rounded-lg transition-transform transform hover:scale-105">OK</button>
+        </div>
+    </div>
+    
+    <!-- Modale per Aggiungere/Sottrarre Valore -->
+    <div id="adjustStatModal" class="fixed inset-0 bg-black bg-opacity-75 backdrop-blur-sm flex justify-center items-center p-4 hidden z-50">
+        <div class="bg-gray-800 rounded-2xl shadow-2xl p-8 w-full max-w-sm text-center fade-in border-t-4 border-cyan-500">
+            <h3 id="adjustStatTitle" class="text-xl font-bold mb-6"></h3>
+            <input type="number" id="adjustStatInput" class="w-full bg-gray-700 text-white text-center text-4xl p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 mb-8" placeholder="0">
+            <div class="flex justify-center gap-4">
+                <button id="confirmAdjust" class="bg-cyan-500 hover:bg-cyan-600 text-gray-900 font-bold py-3 px-8 rounded-lg transition-transform transform hover:scale-105">OK</button>
+                <button id="cancelAdjust" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-8 rounded-lg transition-transform transform hover:scale-105" data-translate="cancelButton">Annulla</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- TRADUZIONI ---
+            const translations = {
+                en: {
+                    pageTitle: "Dice Roller & Combat Helper", appTitle: "D20 Dice Roller",
+                    tabDice: "Dice Roller", tabCombat: "Combat Helper", rollButton: "Roll!", rollDetails: "Roll of", historyTitle: "Roll History",
+                    noRollsYet: "No rolls yet.", clearButton: "Clear", modalTitle: "Are you sure?", modalText: "Do you really want to delete the entire history? This action is not reversible.",
+                    cancelButton: "Cancel", confirmButton: "Confirm",
+                    hero: "Hero", enemy: "Enemy", hp: "Health:", attack: "Attack:", weapon: "Weapon:", defense: "Defense:", armor: "Armor:", notes: "Notes:", coins: "Coins:", poison: "Poison:", bleed: "Bleed:", potions: "Potions:",
+                    heroAttacks: "Hero Attacks", enemyAttacks: "Enemy Attacks", combatLog: "Combat Log", outOfCombatRoll: "D20 Roll",
+                    logWinner: "has won the battle!", resetStat: "Reset to last value",
+                    logNewCombat: "A new fight begins!", deathTitle: "You Have Been Defeated",
+                    deathByPoison: "The hero was defeated by poison!", deathByBleed: "The hero has bled to death!", deathByCombat: "The hero was defeated in battle!",
+                    adjustAdd: "Add to", adjustSubtract: "Subtract from", heroRevived: "The hero has been revived!", usePotion: "Use Potion",
+                    potionUsed: "Hero uses a potion, restoring health and cleansing effects!", noPotions: "No potions left!",
+                    enemyAppliesPoison: "Enemy applies poison!", enemyAppliesBleed: "Enemy applies bleed!",
+                    logAttack: "{attackerName} attacks {defenderName}!",
+                    logAttackRoll: "Attack D20 Roll: <span class='font-bold text-white'>{roll}</span>. Total Damage: {details} = <span class='font-bold text-white'>{totalDamage}</span>",
+                    logAttackDetails: "{attackRoll} + {attackBase}",
+                    logWeaponBonus: "(Weapon)",
+                    logDefenseRoll: "{defenderName} rolls D20 Defense: <span class='font-bold text-white'>{roll}</span>.",
+                    logDamageAfterDefense: "Damage after Defense: {initialDamage} - {defenseRoll} = <span class='font-bold text-white'>{result}</span>",
+                    logFullParry: "{defenderName} completely parries the attack!",
+                    logDamageAfterBaseDefense: "Damage after Base Defense: {initialDamage} - {defenseBase} = <span class='font-bold text-white'>{result}</span>",
+                    logRestParry: "{defenderName} parries the rest of the damage!",
+                    logArmorAbsorbs: "Armor absorbs <span class='font-bold text-blue-400'>{armorDamage}</span> damage. Remaining Armor: <span class='font-bold text-white'>{remainingArmor}</span>",
+                    logTakesDamage: "{defenderName} takes <span class='font-bold'>{damage}</span> health damage!",
+                    logFinalState: "Final state {defenderName}: <span class='text-white'>{hp}</span> Health, <span class='text-white'>{armor}</span> Armor",
+                    logFinalStateNoArmor: "Final state {defenderName}: <span class='text-white'>{hp}</span> Health",
+                    logTakesPoisonDamage: "{characterName} takes poison damage!",
+                    logTakesBleedDamage: "{characterName} takes bleed damage!"
+                },
+                it: {
+                    pageTitle: "Lancio Dadi & Assistente Combattimento", appTitle: "Lancio Dadi D20",
+                    tabDice: "Lancio Dadi", tabCombat: "Assistente Combattimento", rollButton: "Lancia!", rollDetails: "Lancio di", historyTitle: "Storico Lanci",
+                    noRollsYet: "Nessun lancio ancora.", clearButton: "Cancella", modalTitle: "Sei sicuro?", modalText: "Vuoi davvero cancellare tutto lo storico? L'azione non è reversibile.",
+                    cancelButton: "Annulla", confirmButton: "Conferma",
+                    hero: "Eroe", enemy: "Nemico", hp: "Vita:", attack: "Attacco:", weapon: "Arma:", defense: "Difesa:", armor: "Armatura:", notes: "Appunti:", coins: "Monete:", poison: "Veleno:", bleed: "Sanguinamento:", potions: "Pozioni:",
+                    heroAttacks: "Eroe Attacca", enemyAttacks: "Nemico Attacca", combatLog: "Log Combattimento", outOfCombatRoll: "Lancio D20",
+                    logWinner: "ha vinto la battaglia!", resetStat: "Ripristina all'ultimo valore",
+                    logNewCombat: "Inizia un nuovo scontro!", deathTitle: "Sei Stato Sconfitto",
+                    deathByPoison: "L'eroe è stato sconfitto dal veleno!", deathByBleed: "L'eroe è morto dissanguato!", deathByCombat: "L'eroe è stato sconfitto in battaglia!",
+                    adjustAdd: "Aggiungi a", adjustSubtract: "Sottrai da", heroRevived: "L'eroe è stato rianimato!", usePotion: "Usa Pozione",
+                    potionUsed: "L'eroe usa una pozione, ripristina la vita e rimuove gli effetti!", noPotions: "Nessuna pozione rimasta!",
+                    enemyAppliesPoison: "Il nemico applica veleno!", enemyAppliesBleed: "Il nemico applica sanguinamento!",
+                    logAttack: "{attackerName} attacca {defenderName}!",
+                    logAttackRoll: "Lancio D20 Attacco: <span class='font-bold text-white'>{roll}</span>. Danno Totale: {details} = <span class='font-bold text-white'>{totalDamage}</span>",
+                    logAttackDetails: "{attackRoll} + {attackBase}",
+                    logWeaponBonus: "(Arma)",
+                    logDefenseRoll: "{defenderName} lancia D20 Difesa: <span class='font-bold text-white'>{roll}</span>.",
+                    logDamageAfterDefense: "Danno dopo Difesa: {initialDamage} - {defenseRoll} = <span class='font-bold text-white'>{result}</span>",
+                    logFullParry: "{defenderName} para completamente l'attacco!",
+                    logDamageAfterBaseDefense: "Danno dopo Difesa Base: {initialDamage} - {defenseBase} = <span class='font-bold text-white'>{result}</span>",
+                    logRestParry: "{defenderName} para il resto del danno!",
+                    logArmorAbsorbs: "Armatura assorbe <span class='font-bold text-blue-400'>{armorDamage}</span> danni. Armatura rimanente: <span class='font-bold text-white'>{remainingArmor}</span>",
+                    logTakesDamage: "{defenderName} subisce <span class='font-bold'>{damage}</span> danni alla vita!",
+                    logFinalState: "Stato finale {defenderName}: <span class='text-white'>{hp}</span> Vita, <span class='text-white'>{armor}</span> Armatura",
+                    logFinalStateNoArmor: "Stato finale {defenderName}: <span class='text-white'>{hp}</span> Vita",
+                    logTakesPoisonDamage: "{characterName} subisce danni da veleno!",
+                    logTakesBleedDamage: "{characterName} subisce danni da sanguinamento!"
+                },
+                es: {
+                    pageTitle: "Lanzador de Dados y Ayudante de Combate", appTitle: "Lanzador de Dados D20",
+                    tabDice: "Lanzador de Dados", tabCombat: "Ayudante de Combate", rollButton: "¡Lanzar!", rollDetails: "Lanzamiento de", historyTitle: "Historial de Lanzamientos",
+                    noRollsYet: "Aún no hay lanzamientos.", clearButton: "Borrar", modalTitle: "¿Estás seguro?", modalText: "¿Realmente quieres borrar todo el historial? Esta acción no es reversible.",
+                    cancelButton: "Cancelar", confirmButton: "Confirmar",
+                    hero: "Héroe", enemy: "Enemigo", hp: "Vida:", attack: "Ataque:", weapon: "Arma:", defense: "Defensa:", armor: "Armadura:", notes: "Notas:", coins: "Monedas:", poison: "Veneno:", bleed: "Sangrado:", potions: "Pociones:",
+                    heroAttacks: "Héroe Ataca", enemyAttacks: "Enemigo Ataca", combatLog: "Registro de Combate", outOfCombatRoll: "Tirada D20",
+                    logWinner: "¡ha ganado la batalla!", resetStat: "Restablecer al último valor",
+                    logNewCombat: "¡Comienza una nueva pelea!", deathTitle: "Has Sido Derrotado",
+                    deathByPoison: "¡El héroe fue derrotado por veneno!", deathByBleed: "¡El héroe ha muerto desangrado!", deathByCombat: "¡El héroe fue derrotado en batalla!",
+                    adjustAdd: "Añadir a", adjustSubtract: "Restar de", heroRevived: "¡El héroe ha sido revivido!", usePotion: "Usar Poción",
+                    potionUsed: "¡El héroe usa una poción, restaura salud y elimina efectos!", noPotions: "¡No quedan pociones!",
+                    enemyAppliesPoison: "¡El enemigo aplica veneno!", enemyAppliesBleed: "¡El enemigo aplica sangrado!",
+                    logAttack: "¡{attackerName} ataca a {defenderName}!",
+                    logAttackRoll: "Tirada D20 de Ataque: <span class='font-bold text-white'>{roll}</span>. Daño Total: {details} = <span class='font-bold text-white'>{totalDamage}</span>",
+                    logAttackDetails: "{attackRoll} + {attackBase}",
+                    logWeaponBonus: "(Arma)",
+                    logDefenseRoll: "{defenderName} lanza D20 de Defensa: <span class='font-bold text-white'>{roll}</span>.",
+                    logDamageAfterDefense: "Daño después de Defensa: {initialDamage} - {defenseRoll} = <span class='font-bold text-white'>{result}</span>",
+                    logFullParry: "¡{defenderName} para el ataque por completo!",
+                    logDamageAfterBaseDefense: "Daño después de Defensa Base: {initialDamage} - {defenseBase} = <span class='font-bold text-white'>{result}</span>",
+                    logRestParry: "¡{defenderName} para el resto del daño!",
+                    logArmorAbsorbs: "La armadura absorbe <span class='font-bold text-blue-400'>{armorDamage}</span> de daño. Armadura restante: <span class='font-bold text-white'>{remainingArmor}</span>",
+                    logTakesDamage: "¡{defenderName} recibe <span class='font-bold'>{damage}</span> de daño a la vida!",
+                    logFinalState: "Estado final de {defenderName}: <span class='text-white'>{hp}</span> Vida, <span class='text-white'>{armor}</span> Armadura",
+                    logFinalStateNoArmor: "Estado final de {defenderName}: <span class='text-white'>{hp}</span> Vida",
+                    logTakesPoisonDamage: "¡{characterName} sufre daño por veneno!",
+                    logTakesBleedDamage: "¡{characterName} sufre daño por sangrado!"
+                },
+                fr: {
+                    pageTitle: "Lanceur de Dés & Assistant de Combat", appTitle: "Lanceur de Dés D20",
+                    tabDice: "Lanceur de Dés", tabCombat: "Assistant de Combat", rollButton: "Lancer !", rollDetails: "Lancer de", historyTitle: "Historique des Lancers",
+                    noRollsYet: "Aucun lancer pour le moment.", clearButton: "Effacer", modalTitle: "Êtes-vous sûr ?", modalText: "Voulez-vous vraiment supprimer tout l'historique ? Cette action est irréversible.",
+                    cancelButton: "Annuler", confirmButton: "Confirmer",
+                    hero: "Héros", enemy: "Ennemi", hp: "Vie:", attack: "Attaque:", weapon: "Arme:", defense: "Défense:", armor: "Armure:", notes: "Notes:", coins: "Pièces:", poison: "Poison:", bleed: "Saignement:", potions: "Potions:",
+                    heroAttacks: "Le Héros Attaque", enemyAttacks: "L'Ennemi Attaque", combatLog: "Journal de Combat", outOfCombatRoll: "Lancer D20",
+                    logWinner: "a gagné la bataille !", resetStat: "Réinitialiser à la dernière valeur",
+                    logNewCombat: "Un nouveau combat commence !", deathTitle: "Vous Avez Été Vaincu",
+                    deathByPoison: "Le héros a été vaincu par le poison !", deathByBleed: "Le héros est mort vidé de son sang !", deathByCombat: "Le héros a été vaincu au combat !",
+                    adjustAdd: "Ajouter à", adjustSubtract: "Soustraire de", heroRevived: "Le héros a été réanimé !", usePotion: "Utiliser la Potion",
+                    potionUsed: "Le héros utilise une potion, restaure sa santé et dissipe les effets!", noPotions: "Plus de potions!",
+                    enemyAppliesPoison: "L'ennemi applique du poison!", enemyAppliesBleed: "L'ennemi applique un saignement!",
+                    logAttack: "{attackerName} attaque {defenderName} !",
+                    logAttackRoll: "Jet de D20 d'Attaque : <span class='font-bold text-white'>{roll}</span>. Dégâts Totaux : {details} = <span class='font-bold text-white'>{totalDamage}</span>",
+                    logAttackDetails: "{attackRoll} + {attackBase}",
+                    logWeaponBonus: "(Arme)",
+                    logDefenseRoll: "{defenderName} fait un jet de D20 de Défense : <span class='font-bold text-white'>{roll}</span>.",
+                    logDamageAfterDefense: "Dégâts après Défense : {initialDamage} - {defenseRoll} = <span class='font-bold text-white'>{result}</span>",
+                    logFullParry: "{defenderName} pare complètement l'attaque !",
+                    logDamageAfterBaseDefense: "Dégâts après Défense de Base : {initialDamage} - {defenseBase} = <span class='font-bold text-white'>{result}</span>",
+                    logRestParry: "{defenderName} pare le reste des dégâts !",
+                    logArmorAbsorbs: "L'armure absorbe <span class='font-bold text-blue-400'>{armorDamage}</span> points de dégâts. Armure restante : <span class='font-bold text-white'>{remainingArmor}</span>",
+                    logTakesDamage: "{defenderName} subit <span class='font-bold'>{damage}</span> points de dégâts à sa vie !",
+                    logFinalState: "État final de {defenderName} : <span class='text-white'>{hp}</span> Vie, <span class='text-white'>{armor}</span> Armure",
+                    logFinalStateNoArmor: "État final de {defenderName} : <span class='text-white'>{hp}</span> Vie",
+                    logTakesPoisonDamage: "{characterName} subit des dégâts de poison !",
+                    logTakesBleedDamage: "{characterName} subit des dégâts de saignement !"
+                },
+                de: {
+                    pageTitle: "Würfelbecher & Kampfhelfer", appTitle: "D20 Würfelbecher",
+                    tabDice: "Würfelbecher", tabCombat: "Kampfhelfer", rollButton: "Würfeln!", rollDetails: "Wurf von", historyTitle: "Wurfverlauf",
+                    noRollsYet: "Noch keine Würfe.", clearButton: "Löschen", modalTitle: "Sind Sie sicher?", modalText: "Möchten Sie den gesamten Verlauf wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+                    cancelButton: "Abbrechen", confirmButton: "Bestätigen",
+                    hero: "Held", enemy: "Gegner", hp: "Leben:", attack: "Angriff:", weapon: "Waffe:", defense: "Verteidigung:", armor: "Rüstung:", notes: "Notizen:", coins: "Münzen:", poison: "Gift:", bleed: "Blutung:", potions: "Tränke:",
+                    heroAttacks: "Held Greift An", enemyAttacks: "Gegner Greift An", combatLog: "Kampfprotokoll", outOfCombatRoll: "Wurf D20",
+                    logWinner: "hat den Kampf gewonnen!", resetStat: "Auf letzten Wert zurücksetzen",
+                    logNewCombat: "Ein neuer Kampf beginnt!", deathTitle: "Du Wurdest Besiegt",
+                    deathByPoison: "Der Held wurde durch Gift besiegt!", deathByBleed: "Der Held ist verblutet!", deathByCombat: "Der Held wurde im Kampf besiegt!",
+                    adjustAdd: "Hinzufügen zu", adjustSubtract: "Subtrahieren von", heroRevived: "Der Held wurde wiederbelebt!", usePotion: "Trank benutzen",
+                    potionUsed: "Held benutzt einen Trank, stellt Gesundheit wieder her und reinigt Effekte!", noPotions: "Keine Tränke mehr!",
+                    enemyAppliesPoison: "Gegner wendet Gift an!", enemyAppliesBleed: "Gegner wendet Blutung an!",
+                    logAttack: "{attackerName} greift {defenderName} an!",
+                    logAttackRoll: "Angriffs-D20-Wurf: <span class='font-bold text-white'>{roll}</span>. Gesamtschaden: {details} = <span class='font-bold text-white'>{totalDamage}</span>",
+                    logAttackDetails: "{attackRoll} + {attackBase}",
+                    logWeaponBonus: "(Waffe)",
+                    logDefenseRoll: "{defenderName} würfelt D20 Verteidigung: <span class='font-bold text-white'>{roll}</span>.",
+                    logDamageAfterDefense: "Schaden nach Verteidigung: {initialDamage} - {defenseRoll} = <span class='font-bold text-white'>{result}</span>",
+                    logFullParry: "{defenderName} pariert den Angriff vollständig!",
+                    logDamageAfterBaseDefense: "Schaden nach Basisverteidigung: {initialDamage} - {defenseBase} = <span class='font-bold text-white'>{result}</span>",
+                    logRestParry: "{defenderName} pariert den Rest des Schadens!",
+                    logArmorAbsorbs: "Rüstung absorbiert <span class='font-bold text-blue-400'>{armorDamage}</span> Schaden. Verbleibende Rüstung: <span class='font-bold text-white'>{remainingArmor}</span>",
+                    logTakesDamage: "{defenderName} erleidet <span class='font-bold'>{damage}</span> Lebensschaden!",
+                    logFinalState: "Endzustand {defenderName}: <span class='text-white'>{hp}</span> Leben, <span class='text-white'>{armor}</span> Rüstung",
+                    logFinalStateNoArmor: "Endzustand {defenderName}: <span class='text-white'>{hp}</span> Leben",
+                    logTakesPoisonDamage: "{characterName} erleidet Giftschaden!",
+                    logTakesBleedDamage: "{characterName} erleidet Blutungsschaden!"
+                }
+            };
+            let currentLanguage = 'it';
+            let history = [];
+            let combatOver = false;
+            let heroLastStats = {};
+
+            // Riferimenti UI
+            const ui = {
+                languageSelector: document.getElementById('languageSelector'), appContainer: document.getElementById('appContainer'), langButtons: document.querySelectorAll('.lang-btn'),
+                confirmModal: document.getElementById('confirmModal'), confirmClearBtn: document.getElementById('confirmClear'), cancelClearBtn: document.getElementById('cancelClear'),
+                deathModal: document.getElementById('deathModal'), deathMessage: document.getElementById('deathMessage'), closeDeathModal: document.getElementById('closeDeathModal'),
+                adjustStatModal: document.getElementById('adjustStatModal'), adjustStatTitle: document.getElementById('adjustStatTitle'), adjustStatInput: document.getElementById('adjustStatInput'),
+                cancelAdjust: document.getElementById('cancelAdjust'), confirmAdjust: document.getElementById('confirmAdjust'),
+                historyList: document.getElementById('historyList'),
+                clearButton: document.getElementById('clearButton'), tabDiceBtn: document.getElementById('tabDice'), tabCombatBtn: document.getElementById('tabCombat'),
+                diceRollerView: document.getElementById('diceRollerView'), combatHelperView: document.getElementById('combatHelperView'),
+                numDiceInput: document.getElementById('numDice'), diceTypeSelect: document.getElementById('diceType'), rollButton: document.getElementById('rollButton'),
+                resultText: document.getElementById('resultText'), resultDetails: document.getElementById('resultDetails'),
+                hero: {
+                    hp: document.getElementById('heroHp'), attack: document.getElementById('heroAttack'), weapon: document.getElementById('heroWeapon'), defense: document.getElementById('heroDefense'),
+                    armor: document.getElementById('heroArmor'), notes: document.getElementById('heroNotes'), coins: document.getElementById('heroCoins'), poison: document.getElementById('heroPoison'), bleed: document.getElementById('heroBleed'),
+                    potions: document.getElementById('heroPotions')
+                },
+                enemy: {
+                    hp: document.getElementById('enemyHp'), attack: document.getElementById('enemyAttack'), defense: document.getElementById('enemyDefense'),
+                    poison: document.getElementById('enemyPoison'), bleed: document.getElementById('enemyBleed')
+                },
+                heroAttackBtn: document.getElementById('heroAttackBtn'), enemyAttackBtn: document.getElementById('enemyAttackBtn'),
+                combatLog: document.getElementById('combatLog'), outOfCombatRollBtn: document.getElementById('outOfCombatRollBtn'),
+                usePotionBtn: document.getElementById('usePotionBtn'),
+                resetButtons: {
+                    hp: document.getElementById('resetHeroHp'), attack: document.getElementById('resetHeroAttack'), weapon: document.getElementById('resetHeroWeapon'), defense: document.getElementById('resetHeroDefense'),
+                    armor: document.getElementById('resetHeroArmor'), coins: document.getElementById('resetHeroCoins'), poison: document.getElementById('resetHeroPoison'), bleed: document.getElementById('resetHeroBleed')
+                },
+                adjustButtons: document.querySelectorAll('.adjust-btn')
+            };
+            
+            function t(key, replacements = {}) {
+                let text = translations[currentLanguage][key] || key;
+                for (const placeholder in replacements) {
+                    text = text.replace(new RegExp(`\\{${placeholder}\\}`, 'g'), replacements[placeholder]);
+                }
+                return text;
+            }
+
+            function setLanguage(lang) {
+                if (!translations[lang]) return;
+                currentLanguage = lang; document.documentElement.lang = lang;
+                document.title = t('pageTitle');
+                document.querySelectorAll('[data-translate]').forEach(el => {
+                    const key = el.dataset.translate;
+                    if (key) el.textContent = t(key);
+                });
+                document.querySelectorAll('[data-translate-title]').forEach(el => {
+                    const key = el.dataset.translateTitle;
+                    if (key) el.title = t(key);
+                });
+                updateHistoryView();
+                ui.combatLog.innerHTML = ''; // Clear log on language change
+            }
+
+            function initializeApp(lang) {
+                setLanguage(lang);
+                storeInitialStats();
+                ui.languageSelector.classList.add('view-hidden');
+                ui.appContainer.classList.remove('view-hidden');
+                ui.appContainer.classList.add('fade-in');
+                ui.tabDiceBtn.classList.add('active');
+            }
+
+            function storeInitialStats() {
+                for (const key in ui.hero) {
+                    if (ui.hero.hasOwnProperty(key)) {
+                        const element = ui.hero[key];
+                        heroLastStats[key] = element.tagName === 'SPAN' ? element.textContent : element.value;
+                    }
+                }
+            }
+
+            function switchTab(tab) {
+                if (tab === 'dice') {
+                    ui.diceRollerView.classList.remove('view-hidden'); ui.combatHelperView.classList.add('view-hidden');
+                    ui.tabDiceBtn.classList.add('active'); ui.tabCombatBtn.classList.remove('active');
+                } else if (tab === 'combat') {
+                    ui.diceRollerView.classList.add('view-hidden'); ui.combatHelperView.classList.remove('view-hidden');
+                    ui.tabDiceBtn.classList.remove('active'); ui.tabCombatBtn.classList.add('active');
+                }
+            }
+
+            function showDeathModal(reasonKey) {
+                ui.deathMessage.textContent = t(reasonKey);
+                ui.deathModal.classList.remove('hidden');
+            }
+
+            function performRoll(num, type, triggerPoison, triggerBleed) {
+                let rolls = [], total = 0;
+                for (let i = 0; i < num; i++) {
+                    if (parseInt(ui.hero.hp.value) <= 0) break;
+
+                    const roll = Math.floor(Math.random() * type) + 1;
+                    rolls.push(roll); total += roll;
+                    
+                    if (triggerPoison) applyPoisonDamage(); 
+                    if (triggerBleed) applyBleedDamage();
+                }
+                addToHistory(total, rolls, num, type);
+                return { total, rolls };
+            }
+
+            function rollDice() {
+                combatOver = false;
+                const numDice = parseInt(ui.numDiceInput.value), diceType = parseInt(ui.diceTypeSelect.value);
+                if (numDice <= 0 || isNaN(numDice) || numDice > 100) { return; }
+                const { total, rolls } = performRoll(numDice, diceType, true, false);
+                
+                ui.resultText.classList.remove('pop-in');
+                void ui.resultText.offsetWidth; // Trigger reflow
+                ui.resultText.classList.add('pop-in');
+                ui.resultText.textContent = total;
+
+                const detailsText = t('rollDetails') + ` ${numDice}d${diceType}`;
+                ui.resultDetails.textContent = numDice > 1 ? `${detailsText}: [${rolls.join(', ')}]` : detailsText;
+            }
+            
+            function logToCombat(html) {
+                const entry = document.createElement('div');
+                entry.innerHTML = html;
+                ui.combatLog.prepend(entry);
+            }
+
+            function applyStatusDamage(character, damageValue, damageType) {
+                if (character.hp <= 0 || damageValue <= 0) return;
+                
+                character.hp = Math.max(0, character.hp - damageValue);
+                character.hpInput.value = character.hp;
+                
+                const logKey = damageType === 'poison' ? 'logTakesPoisonDamage' : 'logTakesBleedDamage';
+                logToCombat(`<p class="text-sm ${damageType === 'poison' ? 'text-green-400' : 'text-red-400'}">${t(logKey, { characterName: character.name })}</p>`);
+                
+                if (character.isHero && character.hp <= 0) {
+                    checkWinner(damageType === 'poison' ? 'deathByPoison' : 'deathByBleed');
+                } else {
+                    checkWinner();
+                }
+            }
+
+            function applyPoisonDamage() {
+                if (parseInt(ui.hero.hp.value) <= 0) return;
+                const heroPoisonDmg = parseInt(ui.hero.poison.value);
+                if (heroPoisonDmg > 0) {
+                    const heroChar = { hp: parseInt(ui.hero.hp.value), hpInput: ui.hero.hp, name: t('hero'), isHero: true };
+                    applyStatusDamage(heroChar, heroPoisonDmg, 'poison');
+                }
+            }
+
+            function applyBleedDamage() {
+                if (combatOver || parseInt(ui.hero.hp.value) <= 0) return;
+                const heroBleedDmg = parseInt(ui.hero.bleed.value);
+                if (heroBleedDmg > 0) {
+                    const heroChar = { hp: parseInt(ui.hero.hp.value), hpInput: ui.hero.hp, name: t('hero'), isHero: true };
+                    applyStatusDamage(heroChar, heroBleedDmg, 'bleed');
+                }
+            }
+            
+            function applyEnemyStatusEffects() {
+                const enemyPoison = parseInt(ui.enemy.poison.value) || 0;
+                const enemyBleed = parseInt(ui.enemy.bleed.value) || 0;
+                const heroPoison = parseInt(ui.hero.poison.value) || 0;
+                const heroBleed = parseInt(ui.hero.bleed.value) || 0;
+
+                if (enemyPoison > 0 && heroPoison < enemyPoison) {
+                    ui.hero.poison.value = enemyPoison;
+                    logToCombat(`<p class="text-green-400 font-semibold">${t('enemyAppliesPoison')} (${enemyPoison})</p>`);
+                }
+                if (enemyBleed > 0 && heroBleed < enemyBleed) {
+                    ui.hero.bleed.value = enemyBleed;
+                    logToCombat(`<p class="text-red-400 font-semibold">${t('enemyAppliesBleed')} (${enemyBleed})</p>`);
+                }
+            }
+
+            function checkWinner(heroDeathReason = 'deathByCombat') {
+                if (combatOver) return;
+                const heroHealth = parseInt(ui.hero.hp.value);
+                const enemyHealth = parseInt(ui.enemy.hp.value);
+                let winner = null;
+                
+                if (enemyHealth <= 0) winner = t('hero');
+                if (heroHealth <= 0) winner = t('enemy');
+                
+                if (winner) {
+                    logToCombat(`<p class="text-xl font-bold text-center text-yellow-300 py-2">${winner} ${t('logWinner')}</p>`);
+                    combatOver = true;
+                    if (winner === t('enemy')) {
+                        showDeathModal(heroDeathReason);
+                    }
+                }
+            }
+
+            function executeAttack(attacker, defender) {
+                if (combatOver) return;
+                
+                logToCombat(`<div class="p-2 border-t border-gray-700 mt-2"><p class="font-bold text-yellow-400">${t('logAttack', { attackerName: attacker.name, defenderName: defender.name })}</p></div>`);
+
+                performRoll(1, 20, true, true);
+                if (parseInt(ui.hero.hp.value) <= 0) return;
+                const attackRoll = Math.floor(Math.random() * 20) + 1;
+                const totalDamage = attackRoll + attacker.attackBase + (attacker.weaponBonus || 0);
+
+                let attackDetails = t('logAttackDetails', { attackRoll: attackRoll, attackBase: attacker.attackBase });
+                if (attacker.weaponBonus > 0) {
+                    attackDetails += ` + ${attacker.weaponBonus} ${t('logWeaponBonus')}`;
+                }
+                logToCombat(`<p>${t('logAttackRoll', { roll: attackRoll, details: attackDetails, totalDamage: totalDamage })}</p>`);
+
+                const defenseRollResult = performRoll(1, 20, false, false);
+                if (parseInt(ui.hero.hp.value) <= 0) return;
+                const defenseRoll = defenseRollResult.total;
+                logToCombat(`<p>${t('logDefenseRoll', { defenderName: defender.name, roll: defenseRoll })}</p>`);
+
+                let remainingDamage = totalDamage - defenseRoll;
+                if (remainingDamage <= 0) { logToCombat(`<p class="text-green-400 font-semibold">${t('logFullParry', { defenderName: defender.name })}</p>`); return; }
+                logToCombat(`<p>${t('logDamageAfterDefense', { initialDamage: totalDamage, defenseRoll: defenseRoll, result: remainingDamage })}</p>`);
+                
+                let damageDealt = false;
+                const damageAfterAncestral = remainingDamage;
+
+                remainingDamage -= defender.defenseBase;
+                if (remainingDamage <= 0) { logToCombat(`<p class="text-green-400 font-semibold">${t('logRestParry', { defenderName: defender.name })}</p>`); return; }
+                logToCombat(`<p>${t('logDamageAfterBaseDefense', { initialDamage: damageAfterAncestral, defenseBase: defender.defenseBase, result: remainingDamage })}</p>`);
+
+                if (defender.armor > 0) {
+                    const armorDamage = Math.min(defender.armor, remainingDamage);
+                    defender.armor -= armorDamage;
+                    remainingDamage -= armorDamage;
+                    logToCombat(`<p>${t('logArmorAbsorbs', { armorDamage: armorDamage, remainingArmor: defender.armor })}</p>`);
+                    damageDealt = true;
+                }
+                
+                if (remainingDamage > 0) {
+                    defender.hp = Math.max(0, defender.hp - remainingDamage);
+                    logToCombat(`<p class="text-red-500 font-bold">${t('logTakesDamage', { defenderName: defender.name, damage: remainingDamage })}</p>`);
+                    damageDealt = true;
+                }
+                
+                let finalStateLog;
+                if (defender.armorInput) {
+                    finalStateLog = t('logFinalState', { defenderName: defender.name, hp: defender.hp, armor: defender.armor });
+                } else {
+                    finalStateLog = t('logFinalStateNoArmor', { defenderName: defender.name, hp: defender.hp });
+                }
+                logToCombat(`<p class="font-semibold mt-1">${finalStateLog}</p>`);
+                
+                defender.hpInput.value = defender.hp;
+                if(defender.armorInput) defender.armorInput.value = defender.armor;
+
+                if (attacker.isEnemy && damageDealt) {
+                    applyEnemyStatusEffects();
+                }
+
+                checkWinner(defender.isHero ? 'deathByCombat' : undefined);
+            }
+
+            function addToHistory(total, rolls, numDice, diceType) {
+                const detailsText = `(${numDice}d${diceType}): [${rolls.join(', ')}]`;
+                const historyEntry = { total, details: detailsText, timestamp: new Date().toLocaleTimeString(currentLanguage, { hour: '2-digit', minute: '2-digit' }) };
+                history.unshift(historyEntry); updateHistoryView();
+            }
+
+            function updateHistoryView() {
+                ui.historyList.innerHTML = '';
+                if (history.length === 0) {
+                    ui.historyList.innerHTML = `<li class="text-center text-gray-500 p-4" data-translate="noRollsYet">${t('noRollsYet')}</li>`;
+                    return;
+                }
+                history.forEach(entry => {
+                    const li = document.createElement('li');
+                    li.className = 'text-gray-300 flex justify-between items-center bg-gray-800 p-3 rounded-lg';
+                    li.innerHTML = `<span><span class="font-bold text-white text-xl">${entry.total}</span> <span class="text-sm text-gray-400 ml-2">${entry.details}</span></span><span class="text-xs text-gray-500 font-mono">${entry.timestamp}</span>`;
+                    ui.historyList.appendChild(li);
+                });
+            }
+
+            function handleClearRequest() {
+                ui.confirmModal.classList.remove('hidden');
+            }
+
+            function executeClear() {
+                history = []; updateHistoryView();
+                ui.combatLog.innerHTML = ''; combatOver = false;
+                closeModal('confirmModal');
+            }
+            
+            function closeModal(modalId) {
+                const modal = document.getElementById(modalId);
+                const modalContent = modal.querySelector('div.fade-in');
+                modalContent.classList.remove('fade-in');
+                modalContent.classList.add('fade-out');
+                setTimeout(() => { 
+                    modal.classList.add('hidden'); 
+                    modalContent.classList.remove('fade-out');
+                    modalContent.classList.add('fade-in');
+                }, 300);
+            }
+
+            function openAdjustModal(statKey, operation) {
+                const statName = t(statKey.toLowerCase()) || statKey;
+                const title = operation === 'add' ? `${t('adjustAdd')} ${statName}` : `${t('adjustSubtract')} ${statName}`;
+                
+                ui.adjustStatTitle.textContent = title;
+                ui.adjustStatInput.value = '';
+                ui.adjustStatInput.placeholder = "0";
+                ui.adjustStatModal.dataset.statKey = statKey;
+                ui.adjustStatModal.dataset.operation = operation;
+                ui.adjustStatModal.classList.remove('hidden');
+            }
+
+            function handleConfirmAdjust() {
+                const { statKey, operation } = ui.adjustStatModal.dataset;
+                const inputElement = ui.hero[statKey];
+                const valueToAdd = parseInt(ui.adjustStatInput.value);
+
+                if (!isNaN(valueToAdd) && valueToAdd > 0) {
+                    const currentValue = parseInt(inputElement.value) || 0;
+                    let newValue;
+                    if (operation === 'add') {
+                        newValue = currentValue + valueToAdd;
+                    } else {
+                        newValue = currentValue - valueToAdd;
+                    }
+                    inputElement.value = Math.max(0, newValue);
+                    inputElement.dispatchEvent(new Event('change'));
+                }
+                closeModal('adjustStatModal');
+            }
+
+            function reviveHero() {
+                ui.hero.hp.value = heroLastStats.hp;
+                ui.hero.poison.value = 0;
+                ui.hero.bleed.value = 0;
+                heroLastStats.poison = 0;
+                heroLastStats.bleed = 0;
+                combatOver = false;
+                logToCombat(`<p class="text-center font-bold text-green-400 py-2 border-y border-gray-600">${t('heroRevived')}</p>`);
+            }
+            
+            function usePotion() {
+                let potionCount = parseInt(ui.hero.potions.textContent);
+                if (potionCount > 0) {
+                    potionCount--;
+                    ui.hero.potions.textContent = potionCount;
+                    
+                    ui.hero.hp.value = heroLastStats.hp;
+                    ui.hero.poison.value = 0;
+                    ui.hero.bleed.value = 0;
+                    
+                    heroLastStats.poison = 0;
+                    heroLastStats.bleed = 0;
+                    
+                    logToCombat(`<p class="text-center font-bold text-pink-400 py-2">${t('potionUsed')}</p>`);
+                } else {
+                    logToCombat(`<p class="text-center font-bold text-gray-500 py-2">${t('noPotions')}</p>`);
+                }
+            }
+
+            // --- EVENT LISTENERS ---
+            ui.langButtons.forEach(button => button.addEventListener('click', (e) => initializeApp(e.target.dataset.lang)));
+            ui.tabDiceBtn.addEventListener('click', () => switchTab('dice'));
+            ui.tabCombatBtn.addEventListener('click', () => switchTab('combat'));
+            ui.rollButton.addEventListener('click', rollDice);
+            ui.outOfCombatRollBtn.addEventListener('click', () => {
+                combatOver = false;
+                performRoll(1, 20, true, false);
+            });
+            ui.clearButton.addEventListener('click', handleClearRequest);
+            ui.confirmClearBtn.addEventListener('click', executeClear);
+            ui.cancelClearBtn.addEventListener('click', () => closeModal('confirmModal'));
+            ui.closeDeathModal.addEventListener('click', () => {
+                closeModal('deathModal');
+                reviveHero();
+            });
+            ui.confirmAdjust.addEventListener('click', handleConfirmAdjust);
+            ui.cancelAdjust.addEventListener('click', () => closeModal('adjustStatModal'));
+            ui.usePotionBtn.addEventListener('click', usePotion);
+
+            ui.heroAttackBtn.addEventListener('click', () => {
+                const hero = { name: t('hero'), attackBase: parseInt(ui.hero.attack.value), weaponBonus: parseInt(ui.hero.weapon.value), hp: parseInt(ui.hero.hp.value), defenseBase: parseInt(ui.hero.defense.value), armor: parseInt(ui.hero.armor.value), hpInput: ui.hero.hp, armorInput: ui.hero.armor, isHero: true, isEnemy: false };
+                const enemy = { name: t('enemy'), attackBase: parseInt(ui.enemy.attack.value), hp: parseInt(ui.enemy.hp.value), defenseBase: parseInt(ui.enemy.defense.value), armor: 0, hpInput: ui.enemy.hp, armorInput: null, isHero: false, isEnemy: true };
+                executeAttack(hero, enemy);
+            });
+
+            ui.enemyAttackBtn.addEventListener('click', () => {
+                const hero = { name: t('hero'), attackBase: parseInt(ui.hero.attack.value), weaponBonus: parseInt(ui.hero.weapon.value), hp: parseInt(ui.hero.hp.value), defenseBase: parseInt(ui.hero.defense.value), armor: parseInt(ui.hero.armor.value), hpInput: ui.hero.hp, armorInput: ui.hero.armor, isHero: true, isEnemy: false };
+                const enemy = { name: t('enemy'), attackBase: parseInt(ui.enemy.attack.value), hp: parseInt(ui.enemy.hp.value), defenseBase: parseInt(ui.enemy.defense.value), armor: 0, hpInput: ui.enemy.hp, armorInput: null, isHero: false, isEnemy: true };
+                executeAttack(enemy, hero);
+            });
+
+            for (const key in ui.hero) {
+                const element = ui.hero[key];
+                if (element.tagName !== 'SPAN') {
+                    element.addEventListener('change', (e) => {
+                        heroLastStats[key] = e.target.value;
+                    });
+                }
+            }
+            for (const key in ui.resetButtons) {
+                ui.resetButtons[key].addEventListener('click', () => {
+                    ui.hero[key].value = heroLastStats[key];
+                });
+            }
+            ui.adjustButtons.forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const stat = e.currentTarget.dataset.stat;
+                    const op = e.currentTarget.dataset.op;
+
+                    if (stat === 'potions') {
+                        let count = parseInt(ui.hero.potions.textContent);
+                        if (op === 'add') count++;
+                        else if (op === 'subtract') count--;
+                        ui.hero.potions.textContent = Math.max(0, count);
+                    } else if (!e.currentTarget.hasAttribute('data-long-press-disabled')) {
+                         openAdjustModal(stat, op);
+                    } else { 
+                         const inputElement = ui.hero[stat];
+                         let value = parseInt(inputElement.value);
+                         if(op === 'add') value++;
+                         else value--;
+                         inputElement.value = value;
+                         inputElement.dispatchEvent(new Event('change'));
+                    }
+                });
+            });
+            
+            ui.enemy.hp.addEventListener('change', () => {
+                combatOver = false;
+                logToCombat(`<p class="text-center font-bold text-yellow-500 py-2 border-y border-gray-600">${t('logNewCombat')}</p>`);
+            });
+            
+            // --- LOGICA DI AVVIO ---
+            ui.languageSelector.classList.remove('view-hidden');
+        });
+    </script>
+</body>
+</html>
