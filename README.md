@@ -9,14 +9,10 @@ The application is a single, self-contained HTML file, making it incredibly port
 ### Multi-Language Support: Fully localized interface supporting English, Italian, Spanish, French, and German.
 
 ### Advanced Dice Roller:
-Roll any number of dice (1-100) of standard types (d4, d6, d8, d10, d12, d20, d100).
-Displays the total result and a detailed breakdown of individual rolls.
+Roll any number of dice (1-100) of standard types (d4, d6, d8, d10, d12, d20, d100). Displays the total result and a detailed breakdown of individual rolls.
 
 ### Intuitive Combat Helper:
-Track stats for both the Hero and an Enemy.
-Hero Stats: Manage Health, Attack, Weapon, Defense, Armor, Coins, Notes, and status effects like Poison and Bleed.
-Potion System: Use potions to restore health and cleanse negative effects.
-Enemy Stats: Track Health, Attack, Defense, and the Poison/Bleed values they apply on successful hits.
+Track stats for both the Hero and an Enemy. Hero Stats: Manage Health, Attack, Weapon, Defense, Armor, Coins, Notes, and status effects like Poison and Bleed. Potion System: Use potions to restore health and cleanse negative effects. Enemy Stats: Track Health, Attack, Defense, and the Poison/Bleed values they apply on successful hits.
 
 ### Dynamic Combat Log:
 Get real-time, detailed feedback for every action in combat.
@@ -33,11 +29,11 @@ Fully responsive design for seamless use on desktop, tablets, and mobile devices
 ### Zero Dependencies: Runs entirely in the browser. Just open the HTML file to get started.
 Built With
 This project is built with modern web technologies, focusing on simplicity and performance.
-
+```
 HTML5
 Tailwind CSS
 Vanilla JavaScript
-
+```
 Getting Started
 To get a local copy up and running, simply download the index.html file and open it in your favorite web browser.
 
