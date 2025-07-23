@@ -680,42 +680,43 @@
             .app-title {
                 font-size: 2rem;
             }
+            /* Modifica: Manteniamo i controlli del dado in riga su mobile */
             .dice-controls {
-                flex-direction: column;
-                gap: 1rem;
+                /* Rimossi flex-direction: column e gap */
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 0.5rem; /* Spazio ridotto tra gli elementi */
+            }
+            /* Aggiunta: Riduciamo le dimensioni degli input/selettori su mobile */
+            .dice-input {
+                width: 60px; /* Larghezza ridotta */
+                font-size: 1.25rem; /* Dimensione font ridotta */
+                padding: 0.5rem;
+            }
+            .dice-type {
+                width: 70px; /* Larghezza ridotta */
+                font-size: 1.25rem; /* Dimensione font ridotta */
+                padding: 0.5rem;
             }
             .result-number {
                 font-size: 3rem;
             }
             /* Modifiche specifiche per le righe delle statistiche */
             .stat-row {
-                /* Mantiene flex per allineare etichetta e gruppo di input */
-                display: flex; 
-                /* Permette al contenuto di andare a capo se necessario */
-                flex-wrap: nowrap; 
-                /* Allineamento verticale al centro */
-                align-items: center; 
-                /* Spazio tra etichetta e input */
-                gap: 0.5rem; 
+                display: flex;
+                flex-wrap: nowrap;
+                align-items: center;
+                gap: 0.5rem;
             }
             .stat-label {
-                /* Mantiene una larghezza fissa per le etichette */
-                width: 100px; 
-                /* Mantiene l'allineamento a destra */
-                text-align: right; 
-                /* Rimuove il margin-bottom che causava il problema */
-                margin-bottom: 0; 
-                /* Impedisce alle etichette di restringersi troppo */
-                flex-shrink: 0; 
-                font-size: 0.875rem; /* Testo leggermente più piccolo se serve */
+                width: 100px;
+                text-align: right;
+                margin-bottom: 0;
+                flex-shrink: 0;
+                font-size: 0.875rem;
             }
-            /* Permette al gruppo di input di occupare lo spazio rimanente */
-            .stat-input-group {
-                flex: 1;
-                min-width: 0; /* Permette al contenuto di restringersi */
-            }
-            /* Per gli input semplici (nemico) */
-            .input-field {
+            .stat-input-group, .input-field {
                 flex: 1;
                 min-width: 0;
             }
@@ -742,12 +743,11 @@
             }
             /* Ulteriore ottimizzazione per schermi molto piccoli */
             .stat-label {
-                width: 80px; /* Etichette leggermente più strette */
+                width: 80px;
                 font-size: 0.75rem;
             }
             .stat-input-group {
-                /* Riduce il padding interno per risparmiare spazio */
-                padding: 0.15rem; 
+                padding: 0.15rem;
             }
             .stat-input, .potion-display {
                 padding: 0.3rem;
@@ -757,6 +757,12 @@
                 width: 1.5rem;
                 height: 1.5rem;
                 font-size: 1rem;
+            }
+            /* Ancora più compatto per i dadi su schermi molto piccoli */
+            .dice-input, .dice-type {
+                width: 55px; /* Ancora più stretti */
+                font-size: 1.1rem;
+                padding: 0.4rem;
             }
         }
         
