@@ -676,7 +676,7 @@
         }
 
         /* --- RESPONSIVE DESIGN --- */
-        @media (max-width: 480px) {
+        @media (max-width: 768px) {
             .app-title {
                 font-size: 2rem;
             }
@@ -687,16 +687,37 @@
             .result-number {
                 font-size: 3rem;
             }
+            /* Modifiche specifiche per le righe delle statistiche */
             .stat-row {
-                flex-wrap: wrap;
+                /* Mantiene flex per allineare etichetta e gruppo di input */
+                display: flex; 
+                /* Permette al contenuto di andare a capo se necessario */
+                flex-wrap: nowrap; 
+                /* Allineamento verticale al centro */
+                align-items: center; 
+                /* Spazio tra etichetta e input */
+                gap: 0.5rem; 
             }
             .stat-label {
-                width: auto;
-                text-align: left;
-                margin-bottom: 0.25rem;
+                /* Mantiene una larghezza fissa per le etichette */
+                width: 100px; 
+                /* Mantiene l'allineamento a destra */
+                text-align: right; 
+                /* Rimuove il margin-bottom che causava il problema */
+                margin-bottom: 0; 
+                /* Impedisce alle etichette di restringersi troppo */
+                flex-shrink: 0; 
+                font-size: 0.875rem; /* Testo leggermente più piccolo se serve */
             }
-            .stat-input-group, .input-field {
-                width: 100%;
+            /* Permette al gruppo di input di occupare lo spazio rimanente */
+            .stat-input-group {
+                flex: 1;
+                min-width: 0; /* Permette al contenuto di restringersi */
+            }
+            /* Per gli input semplici (nemico) */
+            .input-field {
+                flex: 1;
+                min-width: 0;
             }
         }
 
@@ -718,6 +739,24 @@
             }
             .modal-content {
                 padding: 1.5rem;
+            }
+            /* Ulteriore ottimizzazione per schermi molto piccoli */
+            .stat-label {
+                width: 80px; /* Etichette leggermente più strette */
+                font-size: 0.75rem;
+            }
+            .stat-input-group {
+                /* Riduce il padding interno per risparmiare spazio */
+                padding: 0.15rem; 
+            }
+            .stat-input, .potion-display {
+                padding: 0.3rem;
+                font-size: 0.8rem;
+            }
+            .adjust-btn {
+                width: 1.5rem;
+                height: 1.5rem;
+                font-size: 1rem;
             }
         }
         
