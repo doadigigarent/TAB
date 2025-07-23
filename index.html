@@ -152,10 +152,12 @@
             border-radius: 0.75rem;
             padding: 0.25rem;
             border: 1px solid var(--glass-border);
+            min-width: 10%;
         }
         .stat-input, .potion-display {
             flex-grow: 1;
-            min-width: 90px;
+            flex-shrink: 1;
+            min-width: 45px;
             background: rgba(15, 15, 25, 0.7) !important;
             border: 1px solid var(--glass-border);
             text-align: center;
@@ -163,7 +165,7 @@
             padding: 0.5rem;
             font-size: 0.9rem;
             border-radius: 0.5rem;
-            width: 0;
+            width: 50%;
             color: var(--text-secondary);
             transition: all 0.3s ease;
         }
